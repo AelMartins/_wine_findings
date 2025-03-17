@@ -17,6 +17,12 @@ _wine_findings/                                    →  Raiz do projeto
 │   ├── SECURITY.md                                →  Políticas de segurança do projeto
 │   └── pull_request_template.md                   →  Modelo de solicitações de agregações de
 │                                                     alterações no projeto (pull requests)
+├── artificial_intelligence/                       →  Pasta para armazenar conteúdo relacionado a
+│   |                                                 algoritmos de predição
+|   ├── dataset.csv                                →  Dados que serão utilizados para o treinamento
+│   └── dataset_exploration.ipynb                  →  Anotações analíticas, registro de tratamento
+|                                                     de dados do Dataset, e criador do modelo de predição
+│
 ├── management/                                    →  Pasta para armazenar conteúdo relacionado ao
 │   │                                                 gerenciamento do projeto
 │   ├── FATEC...PROJETO_INTERDICIPLINAR.pdf        →  Manual oficial dos requisitos de
