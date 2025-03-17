@@ -1,11 +1,11 @@
 ## Cronograma e Sprints
 
-### **Sprint 0: Preparação e Planejamento (1 semana)**
+### **Sprint 0: Preparação e Planejamento (1 semana)** ✔
 - **Objetivos:**  
   - [x] Formar a equipe, definir papéis e responsabilidades.
-  - [ ] Configurar o repositório Git (GitHub) e as ferramentas de colaboração.
-  - [ ] Revisar o documento de requisitos e definir o escopo do projeto.
-  - [ ] Escolher o dataset do Kaggle (ex.: Wine Quality) e realizar uma análise preliminar.
+  - [x] Configurar o repositório Git (GitHub) e as ferramentas de colaboração.
+  - [x] Revisar o documento de requisitos e definir o escopo do projeto.
+  - [x] Escolher o dataset do Kaggle e realizar uma análise preliminar.
 
 ---
 
