@@ -11,7 +11,7 @@
 
 ### **Sprint 1: Levantamento de Requisitos e Design de Arquitetura (1 semana)**
 - **Tarefas:**  
-  - [ ] Detalhar os requisitos funcionais e não funcionais.  
+  - [x] Detalhar os requisitos funcionais e não funcionais.  
   - [ ] Definir a arquitetura geral (divisão entre back-end, front-end, mobile e desktop).  
   - [ ] Elaborar diagramas de fluxo, estrutura de dados e esboços das interfaces.  
   - [ ] Planejar as integrações entre os módulos (APIs, protocolos de mensageria).
