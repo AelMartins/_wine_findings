@@ -151,3 +151,252 @@ Algumas colunas possuem conteúdo em português e os valores "-1", "null" ou "-"
 7. **Custo e Otimização**  
    7.1. Monitoramento de custos na nuvem e políticas de desligamento de recursos ociosos.  
    7.2. Uso de instâncias spot ou autoscaling para reduzir custos operacionais.
+
+---
+
+## Arquitetura Geral
+
+```mermaid
+graph LR
+  subgraph FRONT [Camada de Apresentação]
+    Mobile["Mobile App (Flutter)"]
+    Web["Web App (HTML, CSS e JavaScript)"]
+    Desktop["Desktop App (Electron)"]
+  end
+
+  subgraph BACK [Camada de API e Orquestração]
+    APIGateway[API Gateway]
+    BackendAPI["Back-end (API)"]
+    AuthService[Serviço de Autenticação]
+    UserService[Serviço de Usuários e Preferências]
+    RecommenderService[Serviço de Recomendações]
+    MonitorService[Serviço de Monitoramento]
+  end
+
+  subgraph ML [Módulos de ML e IA]
+    PreProcessing[Pré-processamento de Dados]
+    MLCore["Motor de ML (Predição / Clustering)"]
+    MLPipeline[Pipeline de Treinamento]
+  end
+
+  subgraph MQ [Mensageria]
+    Kafka[Kafka / Mensageria]
+  end
+
+  subgraph DB [Camada de Persistência]
+    Postgres[(PostgreSQL)]
+    Mongo[(MongoDB)]
+    Redis[(Redis - Cache)]
+  end
+
+  %% Comunicação entre front e API
+  Mobile --> APIGateway
+  Web --> APIGateway
+  Desktop --> APIGateway
+
+  %% API Gateway roteia para serviços
+  APIGateway --> AuthService
+  APIGateway --> UserService
+  APIGateway --> RecommenderService
+  APIGateway --> BackendAPI
+  APIGateway --> MonitorService
+
+  %% Backend interage com mensageria e ML
+  RecommenderService --> Kafka
+  Kafka --> MLCore
+  MLCore --> Kafka
+  MLCore --> PreProcessing
+  MLCore --> MLPipeline
+
+  %% Serviços acessam bancos de dados
+  AuthService --> Postgres
+  UserService --> Postgres
+  RecommenderService --> Postgres
+  RecommenderService --> Mongo
+  MonitorService --> Mongo
+  BackendAPI --> Redis
+```
+
+### Camadas e Componentes
+
+#### 1. Camada de Apresentação (Grupo FRONT)
+- **Web**: Aplicação SPA (Single-Page Application) em HTML, CSS e JavaScript com comunicação via REST e WebSocket.
+- **Mobile**: Flutter, compartilhando lógica de negócio mínima com o web.
+- **Desktop**: Aplicação Electron, encapsulando o front-end Web.
+
+**Responsabilidades**:
+- Interfaces de usuário responsivas e acessíveis.
+- Consumo de APIs para autenticação, consultas e streaming de dados.
+- Renderização de dashboards, formulários e visualizações gráficas.
+
+#### 2. Camada de API e Orquestração (Grupo BACK)
+- **API Gateway**: Ponto único de entrada AWS API Gateway, roteando chamadas para microserviços.
+- **Serviço de Autenticação**: Microserviço dedicado a login, JWT, renovação de token e políticas de acesso.
+- **Serviço de Usuários e Preferências**: CRUD de perfis, formulários e histórico.
+- **Serviço de Recomendações**: Orquestra predições síncronas e encaminha tarefas assíncronas para o motor de ML.
+- **Serviço de Monitoramento**: Exposição de métricas via Prometheus e logs estruturados.
+
+#### 3. Camada de Processamento de Dados e ML (Módulos de ML e IA (Clustering, Predição))
+- **Microserviço de Pré-processamento**:
+  - Limpeza, normalização e enriquecimento de dados antes do treinamento.
+- **Motor de Machine Learning**:
+  - Modelos de regressão/classificação para predição.
+  - Algoritmos de clustering para segmentação de perfis.
+- **Validação e Pipeline**:
+  - Orquestração de treinamento contínuo (ML Ops) em Airflow ou Kubeflow.
+
+#### 4. Camada de Mensageria (Mensageria (MQ))
+- **Broker de Mensagens**: Kafka gerenciando tópicos para:
+  1. Pedidos de predição assíncrona.
+  2. Atualizações de perfil e feedback.
+  3. Eventos de auditoria e notificações.
+
+#### 5. Camada de Persistência (Banco de Dados)
+- **PostgreSQL**: Dados relacionais (usuários, preferências, histórico).
+- **MongoDB**: Armazenamento de logs, feedbacks semi-estruturados e documentos JSON.
+- **Cache**: Redis para caching de resultados frequentes e sessões.
+
+---
+
+### Comunicação e Fluxos
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Cliente
+  participant AuthService as Serviço de Autenticação
+  participant Recommender as Serviço de Recomendações
+  participant Broker as Broker de Mensagens (Kafka/RabbitMQ)
+  participant MLService as Motor de ML
+  participant BD as Banco de Dados
+  participant Front as Front-end (Web/Mobile/Desktop)
+
+  %% Fluxo de Autenticação
+  Cliente->>AuthService: Envia credenciais (email/senha)
+  AuthService-->>Cliente: Retorna JWT válido
+  Cliente->>Front: Armazena token e envia com Authorization
+
+  %% Fluxo de Recomendação (predição simples)
+  Front->>Recommender: Solicita recomendação (com JWT)
+  alt Predição simples
+    Recommender->>MLService: Chamada síncrona de predição
+    MLService->>BD: (Opcional) Persiste resultado
+    MLService-->>Recommender: Retorna recomendação
+    Recommender-->>Front: Envia recomendação
+  else Análise pesada
+    Recommender->>Broker: Publica evento de predição
+    Broker->>MLService: Entrega evento
+    MLService->>BD: Processa e armazena resultado
+    MLService-->>Broker: Emite evento de conclusão
+    Broker-->>Front: Notifica via WebSocket/polling
+    Front->>BD: Consulta resultado final
+  end
+```
+
+#### 1. Fluxo de Autenticação
+1. Cliente envia credenciais ao Serviço de Autenticação.
+2. Serviço valida e retorna JWT.
+3. Cliente inclui JWT no header `Authorization` em todas as requisições.
+
+#### 2. Fluxo de Recomendação
+1. Cliente solicita recomendações ao Serviço de Recomendações.
+2. Se for predição simples, serviço chama diretamente o Motor de ML.
+3. Para análise pesada, Serviço de Recomendações publica evento no broker.
+4. Microserviço de ML consome, processa e persiste resultado.
+5. Front-end recebe via WebSocket ou polling e exibe ao usuário.
+
+---
+
+### Implantação e Infraestrutura
+
+```mermaid
+flowchart TD
+    subgraph DevOps[DevOps]
+        GH[GitHub Actions]
+        GH -->|CI: Build/Test/Scan| DockerHub
+        GH -->|CD: Deploy| K8SCluster
+    end
+
+    subgraph Containerização
+        DockerHub["Docker Registry (DockerHub/GitHub Packages)"]
+    end
+
+    subgraph Orquestração["Kubernetes Cluster (EKS/GKE/AKS)"]
+        subgraph Services
+            API[API Gateway]
+            Auth[Auth Service]
+            Rec[Recommendation Service]
+            ML[ML Engine]
+            MQ["Mensageria (Kafka/RabbitMQ)"]
+        end
+        Metrics[Prometheus + Grafana]
+        Ingress["Ingress Controller (TLS Enabled)"]
+    end
+
+    subgraph Banco["Banco de Dados Gerenciado (PostgreSQL - RDS/Aurora)"]
+        DBPrimary[Primary Instance]
+        DBRead[Read Replicas]
+    end
+
+    subgraph Segurança
+        Secrets[AWS Secrets Manager]
+        TLS[TLS Everywhere]
+    end
+
+    GH --> Secrets
+    K8SCluster --> Ingress
+    Ingress --> API
+    API --> Auth
+    API --> Rec
+    Rec --> MQ
+    MQ --> ML
+    ML --> DBPrimary
+    DBPrimary --> DBRead
+
+    Services --> Metrics
+    Secrets --> Services
+    TLS --> Ingress
+    TLS --> Services
+```
+
+- **Containerização**: Docker para todos os serviços.
+- **Orquestração**: Kubernetes (EKS/GKE/AKS) com helm charts.
+- **CI/CD**: GitHub Actions
+  - Build, test e security scan em cada PR.
+  - Deploy automático em ambientes de staging e produção.
+- **Escalabilidade**:
+  - Horizontal autoscaling de pods Kubernetes.
+  - Banco gerenciado (RDS/Aurora) com réplicas de leitura.
+- **Segurança**:
+  - TLS em todas as comunicações.
+  - Secrets gerenciados por AWS Secrets Manager.
+
+---
+
+### Padrões e Boas Práticas
+
+```mermaid
+flowchart LR
+    A[Microserviços] --> B[Bounded Contexts]
+    A --> C[Comunicação]
+    C --> C1[RESTful APIs]
+    C --> C2["gRPC (Interno)"]
+
+    D[Documentação] --> D1[OpenAPI / Swagger]
+    D --> D2[Diagramas UML atualizados]
+
+    E[Testes] --> E1[Testes Unitários]
+    E --> E2[Testes de Integração]
+    E --> E3[Testes End-to-End]
+    E3 --> E4[80% de Cobertura Mínima]
+
+    F[Observabilidade] --> F1[Logs Estruturados]
+    F --> F2[Métricas via Prometheus]
+    F --> F3[Dashboards no Grafana]
+```
+
+- **Design**: Microserviços alinhados a bounded contexts.
+- **Comunicação**: RESTful + gRPC para uso interno (alto desempenho).
+- **Documentação**: OpenAPI (Swagger) e diagramas UML atualizados.
+- **Testes**: Unitários, integração e e2e com cobertura mínima de 80%.
+- **Observabilidade**: Logs estruturados, métricas em Prometheus e dashboards no Grafana.
