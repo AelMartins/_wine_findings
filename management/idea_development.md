@@ -400,3 +400,124 @@ flowchart LR
 - **Documentação**: OpenAPI (Swagger) e diagramas UML atualizados.
 - **Testes**: Unitários, integração e e2e com cobertura mínima de 80%.
 - **Observabilidade**: Logs estruturados, métricas em Prometheus e dashboards no Grafana.
+
+---
+
+### Protocolo de Mensageria
+
+Detalhes dos **tópicos de mensageria**, **formatos de mensagem**, **papéis de produtor/consumidor** e **cenas de uso** dentro da plataforma.
+
+#### Broker e Configuração
+
+- **Tecnologia**: Apache Kafka (RabbitMQ como alternativa secundária).  
+- **Cluster**:
+  - Múltiplas brokers para alta disponibilidade.  
+  - ZooKeeper (ou Kafka Raft) para coordenação de cluster.
+- **Segurança**:
+  - Autenticação SASL/SCRAM.  
+  - Criptografia TLS para tráfego entre brokers e clientes.
+  - Acl (Access Control Lists) definindo quem pode produzir/consumir em cada tópico.
+
+---
+
+#### Tópicos Principais e Esquemas
+
+| Tópico                   | Produtor                           | Consumidor                  | Esquema (JSON Schema)            | Descrição                               |
+|--------------------------|------------------------------------|-----------------------------|----------------------------------|-----------------------------------------|
+| `prediction.requests`    | Serviço de Recomendações           | Serviço de ML               | `PredictionRequest`              | Solicitação de predição de perfil       |
+| `prediction.responses`   | Serviço de ML                      | Serviço de Recomendações    | `PredictionResponse`             | Resultado da predição                   |
+| `user.feedback`          | Serviço de Feedback                | Analytics / Monitoramento   | `FeedbackEvent`                  | Evento de novo feedback                 |
+| `profile.updates`        | Serviço de Preferências            | Serviço de Recomendações    | `ProfileUpdate`                  | Atualização de perfil do usuário        |
+
+##### 1. Schema: `PredictionRequest`
+```json
+{
+  "type": "object",
+  "required": ["userId","inputVector","correlationId"],
+  "properties": {
+    "userId": {"type":"string","format":"uuid"},
+    "inputVector": {"type":"object","additionalProperties":{"type":"number"}},
+    "correlationId": {"type":"string"}
+  }
+}
+```
+
+##### 2. Schema: `PredictionResponse`
+```json
+{
+  "type": "object",
+  "required": ["correlationId","predictedQuality","cluster","timestamp"],
+  "properties": {
+    "correlationId": {"type":"string"},
+    "predictedQuality": {"type":"integer"},
+    "cluster": {"type":"string"},
+    "timestamp": {"type":"string","format":"date-time"}
+  }
+}
+```
+
+##### 3. Schema: `FeedbackEvent`
+```json
+{
+  "type":"object",
+  "required":["feedbackId","userId","wineId","ranking","createdAt"],
+  "properties":{
+    "feedbackId":{"type":"string","format":"uuid"},
+    "userId":{"type":"string","format":"uuid"},
+    "wineId":{"type":"string","format":"uuid"},
+    "ranking":{"type":"integer","minimum":0,"maximum":20},
+    "comments":{"type":"string"},
+    "createdAt":{"type":"string","format":"date-time"}
+  }
+}
+```
+
+##### 4. Schema: `ProfileUpdate`
+```json
+{
+  "type":"object",
+  "required":["userId","preferenceId","lastUpdated"],
+  "properties":{
+    "userId":{"type":"string","format":"uuid"},
+    "preferenceId":{"type":"string","format":"uuid"},
+    "lastUpdated":{"type":"string","format":"date-time"}
+  }
+}
+```
+
+---
+
+#### Padrões de Uso
+
+- **Idempotência**: `correlationId` no request garante processamento único.  
+- **Ordenação**: particionamento de tópico por `userId` para manter ordem por usuário.  
+- **Retenção**: config. de retenção de 7 dias para recuperação de falhas.  
+- **Dead Letter Queue**: tópicos `*.dlq` para mensagens que falharem após X tentativas.
+
+---
+
+#### Fluxos de Exemplo
+
+##### 1. Processamento de Predição
+1. **Produzir**: Recommendation Service publica `PredictionRequest` em `prediction.requests`.  
+2. **Consumir**: ML Service lê, executa predição e formata `PredictionResponse`.  
+3. **Publicar**: ML Service envia resposta em `prediction.responses`.  
+4. **Reconciliação**: Recommendation Service consome o response, persiste e notifica front.
+
+##### 2. Propagação de Feedback
+1. **Produzir**: Feedback Service publica `FeedbackEvent` em `user.feedback`.  
+2. **Consumir**: Analytics Service agrega e atualiza as métricas do usuário.
+
+##### 3. Atualização de Perfil
+1. **Produzir**: Preference Service, após atualização, publica `ProfileUpdate`.  
+2. **Consumir**: Recommendation Service reprocessa clusters ou invalida caches.
+
+---
+
+#### Monitoramento e Alertas
+
+- **Métricas**: Kafka Exporter + Prometheus para lag de consumer groups, throughput e erros.  
+- **Logs**: incluir `topic`, `partition`, `offset` e `correlationId` em logs.  
+- **Alertas**:
+  - Lag acima de X mensagens.  
+  - Taxa de erro no consumo > Y%.

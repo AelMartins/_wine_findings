@@ -14,7 +14,7 @@
   - [x] Detalhar os requisitos funcionais e não funcionais.  
   - [x] Definir a arquitetura geral (divisão entre back-end, front-end, mobile e desktop).  
   - [ ] Elaborar diagramas de fluxo, estrutura de dados e esboços das interfaces.  
-  - [ ] Planejar as integrações entre os módulos (APIs, protocolos de mensageria).
+  - [x] Planejar as integrações entre os módulos (APIs, protocolos de mensageria).
 
 ---
 
