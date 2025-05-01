@@ -34,7 +34,9 @@ _wine_findings/                                    →  Raiz do projeto
 │   ├── project_development.md                     →  Cronograma de desenvolvimento do projeto
 │   ├── requirements_summary.md                    →  Resumo dos requisitos de desenvolvimento explícitos no
 |   |                                                 manual oficial da Fatec Franca para a 5ª turma de DSM
-│   └── architecture_summary.md                    →  Panorama geral da arquitetura do projeto
+│   ├── architecture_summary.md                    →  Panorama geral da arquitetura do projeto
+│   └── wine-findings-api-1.0.0.yaml               →  Documento descritivo de rotas, componentes e propriedades 
+|                                                     de entidades para elaboração do serviço da API
 │
 ├── LICENSE.md                                     →  Licença de direitos autorais (copyright)
 └── README.md                                      →  Documento de apresentação e descrição da aplicação
