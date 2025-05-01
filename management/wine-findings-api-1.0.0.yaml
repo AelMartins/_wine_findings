@@ -1,0 +1,579 @@
+openapi: 3.0.3
+info:
+  title: Wine Findings API
+  version: 1.0.0
+tags:
+  - name: Auth
+  - name: Users
+  - name: Preferences
+  - name: Recommendations
+  - name: Predictions
+  - name: Feedback
+  - name: Wines
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login e geração de token JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Token JWT válido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users:
+    post:
+      tags:
+        - Users
+      summary: Criação de novo usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: Usuário criado com sucesso
+          headers:
+            Location:
+              description: URL do novo recurso
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Retorna usuário pelo ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalhes do usuário
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Users
+      summary: Atualiza dados do usuário
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: Usuário atualizado com sucesso
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /preferences:
+    get:
+      tags:
+        - Preferences
+      summary: Retorna preferências do usuário logado
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Lista de preferências
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Preference'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Preferences
+      summary: Criação de preferências do usuário
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Preference'
+      responses:
+        '201':
+          description: Preferência criada com sucesso
+          headers:
+            Location:
+              description: URL do recurso criado
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /preferences/{id}:
+    put:
+      tags:
+        - Preferences
+      summary: Atualiza uma preferência do usuário
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Preference'
+      responses:
+        '200':
+          description: Preferência atualizada com sucesso
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - Preferences
+      summary: Atualização parcial da preferência do usuário
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Preference'
+      responses:
+        '200':
+          description: Preferência atualizada parcialmente com sucesso
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /recommendations:
+    get:
+      tags:
+        - Recommendations
+      summary: Retorna recomendações personalizadas
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Lista de vinhos recomendados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Wine'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /predictions:
+    get:
+      tags:
+        - Predictions
+      summary: Lista histórico de predições
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Lista de predições
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Prediction'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /predictions/{id}:
+    get:
+      tags:
+        - Predictions
+      summary: Retorna predição pelo ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalhes da predição
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prediction'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /feedback:
+    post:
+      tags:
+        - Feedback
+      summary: Enviar feedback do usuário sobre uma recomendação
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Feedback'
+      responses:
+        '201':
+          description: Feedback registrado
+          headers:
+            Location:
+              description: URL do feedback criado
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /feedback/{id}:
+    put:
+      tags:
+        - Feedback
+      summary: Atualiza um feedback existente
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Feedback'
+      responses:
+        '200':
+          description: Feedback atualizado
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Feedback
+      summary: Remove um feedback existente
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Feedback removido com sucesso
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /wines:
+    get:
+      tags:
+        - Wines
+      summary: Lista todos os vinhos cadastrados
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Lista de vinhos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Wine'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    UnauthorizedError:
+      description: Token inválido ou ausente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequest:
+      description: Requisição malformada ou com dados inválidos
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Erro interno inesperado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: Página de resultados
+      required: false
+      schema:
+        type: integer
+        default: 1
+    Size:
+      name: size
+      in: query
+      description: Quantidade de itens por página
+      required: false
+      schema:
+        type: integer
+        default: 20
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: senha123
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: string
+
+    User:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        id:
+          type: string
+          readOnly: true
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        password_hash:
+          type: string
+          readOnly: true
+        registered_at:
+          type: string
+          format: date-time
+          readOnly: true
+        preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/Preference'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/Prediction'
+
+    Preference:
+      type: object
+      properties:
+        id:
+          type: string
+        region:
+          type: string
+        producer:
+          type: string
+        vintage:
+          type: string
+        flavor_notes:
+          type: array
+          items:
+            type: string
+        last_updated:
+          type: string
+          format: date-time
+        user_id:
+          type: string
+
+    Prediction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        input_vector:
+          type: object
+          additionalProperties:
+            type: number
+        predicted_quality:
+          type: integer
+        cluster:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Wine:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        producer:
+          type: string
+        region:
+          type: string
+        vintage:
+          type: string
+        rating:
+          type: number
+        flavor_profile:
+          type: array
+          items:
+            type: string
+
+    Feedback:
+      type: object
+      properties:
+        id:
+          type: string
+        wineId:
+          type: string
+        recommendationId:
+          type: string
+        ranking:
+          type: integer
+          minimum: 0
+          maximum: 20
+        comments:
+          type: string
+        created_at:
+          type: string
+          format: date-time
