@@ -31,6 +31,7 @@ _wine_findings/                                    →  Raiz do projeto
 │   │                                                 FATEC_DSM_MANUAL_VERSAO_2_DE_2023_DO_PROJETO_INTERDICIPLINAR
 │   │                                                 .pdf)
 │   ├── idea_development.md                        →  Esboço da ideia geral do projeto
+│   ├── design_development.fig                     →  Design visual do projeto
 │   ├── project_development.md                     →  Cronograma de desenvolvimento do projeto
 │   ├── requirements_summary.md                    →  Resumo dos requisitos de desenvolvimento explícitos no
 |   |                                                 manual oficial da Fatec Franca para a 5ª turma de DSM
